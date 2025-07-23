@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 )
 
@@ -21,19 +22,21 @@ type Config struct {
 }
 
 func main() {
-	// TODO: change in final build
-	configFilePath := "C:/Users/henry/Projects/Val_Launcher/config/default.json"
-	config := parseConfig(configFilePath)
+	config := parseConfig("./config.json")
 	s := rand.NewSource(time.Now().Unix())
-	r := rand.New(s) // initialize local pseudorandom generator
+	r := rand.New(s)
 
+	resetValorantState(config)
+	time.Sleep(3 * time.Second) // Pause for 5 seconds
+
+	// run valorant
 	cmd := exec.Command(config.ExeFilepath)
 	_, err := cmd.Output()
 	if err != nil {
 		log.Fatalf("Failed to run Valorant: %v", err)
 	}
 
-	time.Sleep(5 * time.Second) // Pause for 5 seconds
+	time.Sleep(3 * time.Second) // Pause for 5 seconds
 
 	for _, change := range config.Changes {
 		source := change.Inputs[r.Intn(len(change.Inputs))]
@@ -54,6 +57,86 @@ func parseConfig(filepath string) Config {
 	}
 
 	return config
+}
+
+func resetValorantState(config Config) error {
+	var m = map[string]bool{}
+
+	entries, err := os.ReadDir("./default_resources/")
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			m[entry.Name()] = true
+		}
+	}
+
+	// check if default resource exists and if not save it
+	for _, change := range config.Changes {
+		if _, found := m[filepath.Base(change.Ouput)]; !found {
+			destination := filepath.Join("./default_resources/", filepath.Base(change.Ouput))
+
+			fmt.Println("added default: ", destination)
+			err := deepCopy(change.Ouput, destination)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// set default resources into game files
+	for _, change := range config.Changes {
+		base := filepath.Base(change.Ouput)
+		err := deepCopy(filepath.Join("./default_resources/", base), change.Ouput)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// CopyFileWithMetadata copies a file from src to dst, preserving content, permissions, and timestamps.
+func deepCopy(src, dst string) error {
+	// Open source file
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	// Get source file info
+	srcInfo, err := srcFile.Stat()
+	if err != nil {
+		return err
+	}
+
+	// Create destination file (overwrite if it exists)
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	// Copy contents
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return err
+	}
+
+	// Copy file permissions
+	if err := os.Chmod(dst, srcInfo.Mode()); err != nil {
+		return err
+	}
+
+	// Copy timestamps (atime is not available via os.Stat, so we reuse mod time for both)
+	modTime := srcInfo.ModTime()
+	if err := os.Chtimes(dst, modTime, modTime); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func copyFile(source, destination string) error {
