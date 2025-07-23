@@ -1,0 +1,12 @@
+{
+  "exe_filepath": "C:/Riot Games/Riot Client/RiotClientServices.exe",
+  "changes": [
+    {
+      "description": "homescreen",
+      "inputs": [
+        "C:/Users/henry/Projects/Val_Launcher/resources/11_00_Homescreen.mp4"
+      ],
+      "ouput": "C:/Riot Games/VALORANT/live/ShooterGame/Content/Movies/Menu/11_00_Homescreen.mp4"
+    }
+  ]
+}
