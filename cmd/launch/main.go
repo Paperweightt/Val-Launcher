@@ -90,6 +90,7 @@ func resetValorantState(config Config) error {
 	for _, change := range config.Changes {
 		base := filepath.Base(change.Ouput)
 		err := deepCopy(filepath.Join("./default_resources/", base), change.Ouput)
+		// err := deepCopy("C:/Users/henry/Projects/Val_Launcher/resources/red_dress_1.mp4", change.Ouput)
 		if err != nil {
 			return err
 		}
@@ -126,10 +127,11 @@ func deepCopy(src, dst string) error {
 	}
 
 	// Copy file permissions
-	if err := os.Chmod(dst, srcInfo.Mode()); err != nil {
-		return err
-	}
+	// if err := os.Chmod(dst, srcInfo.Mode()); err != nil {
+	// 	return err
+	// }
 
+	// required
 	// Copy timestamps (atime is not available via os.Stat, so we reuse mod time for both)
 	modTime := srcInfo.ModTime()
 	if err := os.Chtimes(dst, modTime, modTime); err != nil {

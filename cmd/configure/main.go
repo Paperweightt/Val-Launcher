@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/fyne-io/fyne"
 	"log" // TODO: remove
 	"os"
 )
