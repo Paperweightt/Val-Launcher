@@ -1,6 +1,6 @@
 ### Val Launcher
 
-not ready for use
+Not ready for use
 
 ## This is NOT a hack client
 
@@ -8,7 +8,8 @@ Val Launcher adds in some simple configuration to automaticly set the main menu 
 
 ## How To Use
 
-specify the filepath of the game as well as the input mp4s and output location in the config.json
+Specify the filepath of the game as well as the input mp4s and output location in the config.json
+Multiple inputs will cause the launcher to choose one at random
 
 ```json config.json
 {
@@ -31,3 +32,7 @@ specify the filepath of the game as well as the input mp4s and output location i
 ## Bannable?
 
 Some people have reported getting banned for changing the background file, use at your own risk
+
+## Plans
+
+A gui is planned for selecting images and the files they replace

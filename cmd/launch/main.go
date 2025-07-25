@@ -2,13 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"fmt" // TODO: remove
+	"fmt" // TODO: remove one or the other
 	"io"
-	"log" // TODO: remove
+	"log" // TODO: remove one or the other
 	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -22,7 +23,8 @@ type Config struct {
 }
 
 func main() {
-	config := parseConfig("./config.json")
+	configPath := filepath.Join(exeDir(), "config.json")
+	config := parseConfig(configPath)
 	s := rand.NewSource(time.Now().Unix())
 	r := rand.New(s)
 
@@ -44,6 +46,33 @@ func main() {
 	}
 }
 
+// func exeDir() string {
+// 	exePath, err := os.Executable()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return filepath.Dir(exePath)
+// }
+
+func exeDir() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	exeDir := filepath.Dir(exePath)
+
+	// Detect if running from a temp folder (go run)
+	if strings.Contains(exeDir, "go-build") {
+		fmt.Println("using dev fallback")
+		// fallback to current working dir
+		wd, _ := os.Getwd()
+		return wd
+	}
+
+	return exeDir
+}
+
 func parseConfig(filepath string) Config {
 	var config Config
 
@@ -61,8 +90,9 @@ func parseConfig(filepath string) Config {
 
 func resetValorantState(config Config) error {
 	var m = map[string]bool{}
+	resourcesPath := filepath.Join(exeDir(), "default_resources")
 
-	entries, err := os.ReadDir("./default_resources/")
+	entries, err := os.ReadDir(resourcesPath)
 	if err != nil {
 		return err
 	}
@@ -76,9 +106,11 @@ func resetValorantState(config Config) error {
 	// check if default resource exists and if not save it
 	for _, change := range config.Changes {
 		if _, found := m[filepath.Base(change.Ouput)]; !found {
-			destination := filepath.Join("./default_resources/", filepath.Base(change.Ouput))
+			base := filepath.Base(change.Ouput)
+			destination := filepath.Join(resourcesPath, base)
 
 			fmt.Println("added default: ", destination)
+
 			err := deepCopy(change.Ouput, destination)
 			if err != nil {
 				return err
@@ -89,7 +121,7 @@ func resetValorantState(config Config) error {
 	// set default resources into game files
 	for _, change := range config.Changes {
 		base := filepath.Base(change.Ouput)
-		err := deepCopy(filepath.Join("./default_resources/", base), change.Ouput)
+		err := deepCopy(filepath.Join(resourcesPath, base), change.Ouput)
 		// err := deepCopy("C:/Users/henry/Projects/Val_Launcher/resources/red_dress_1.mp4", change.Ouput)
 		if err != nil {
 			return err
@@ -126,6 +158,7 @@ func deepCopy(src, dst string) error {
 		return err
 	}
 
+	// not required for valorant's validity check
 	// Copy file permissions
 	// if err := os.Chmod(dst, srcInfo.Mode()); err != nil {
 	// 	return err
