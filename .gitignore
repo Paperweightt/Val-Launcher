@@ -2,3 +2,4 @@ resources/
 **/default_resources/*
 /bin/
 /dist/
+/my_bin/

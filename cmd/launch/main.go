@@ -22,37 +22,76 @@ type Config struct {
 	} `json:"changes"`
 }
 
+// func main() {
+// 	configPath := filepath.Join(exeDir(), "config.json")
+// 	config := parseConfig(configPath)
+// 	s := rand.NewSource(time.Now().Unix())
+// 	r := rand.New(s)
+//
+// 	resetValorantState(config)
+// 	time.Sleep(3 * time.Second) // wait for resetvalstate before riot client loads
+//
+// 	// run valorant
+// 	cmd := exec.Command(config.ExeFilepath)
+// 	_, err := cmd.Output()
+// 	if err != nil {
+// 		log.Fatalf("Failed to run Valorant: %v", err)
+// 	}
+//
+// 	time.Sleep(3 * time.Second) // wait for riotclient to load
+//
+// 	for _, change := range config.Changes {
+// 		source := change.Inputs[r.Intn(len(change.Inputs))]
+// 		copyFile(source, change.Ouput)
+// 	}
+// }
+
 func main() {
 	configPath := filepath.Join(exeDir(), "config.json")
 	config := parseConfig(configPath)
-	s := rand.NewSource(time.Now().Unix())
-	r := rand.New(s)
 
-	resetValorantState(config)
 	time.Sleep(3 * time.Second) // Pause for 5 seconds
 
 	// run valorant
 	cmd := exec.Command(config.ExeFilepath)
 	_, err := cmd.Output()
 	if err != nil {
-		log.Fatalf("Failed to run Valorant: %v", err)
+		log.Fatalf("Failed to run RiotClient.exe: %v", err)
 	}
 
-	time.Sleep(3 * time.Second) // Pause for 5 seconds
+	cmd.Process.Kill()
 
-	for _, change := range config.Changes {
-		source := change.Inputs[r.Intn(len(change.Inputs))]
-		copyFile(source, change.Ouput)
+	for {
+		if isProcessRunning("VALORANT.exe") {
+			applyChanges(config)
+			break
+		}
+		time.Sleep(1 * time.Second)
 	}
 }
 
-// func exeDir() string {
-// 	exePath, err := os.Executable()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return filepath.Dir(exePath)
-// }
+func applyChanges(config Config) error {
+	for _, change := range config.Changes {
+		s := rand.NewSource(time.Now().Unix())
+		r := rand.New(s)
+
+		source := change.Inputs[r.Intn(len(change.Inputs))]
+		err := copyFile(source, change.Ouput)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func isProcessRunning(processName string) bool {
+	out, err := exec.Command("tasklist").Output()
+	if err != nil {
+		fmt.Println("Error running tasklist:", err)
+		return false
+	}
+	return strings.Contains(string(out), processName)
+}
 
 func exeDir() string {
 	exePath, err := os.Executable()

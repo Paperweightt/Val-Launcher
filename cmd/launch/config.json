@@ -4,10 +4,7 @@
     {
       "description": "homescreen",
       "inputs": [
-        "C:/Users/henry/Projects/Val_Launcher/resources/red_dress_1.mp4",
-        "C:/Users/henry/Projects/Val_Launcher/resources/red_dress_2.mp4",
-        "C:/Users/henry/Projects/Val_Launcher/resources/pink_hair.mp4",
-        "C:/Users/henry/Projects/Val_Launcher/resources/black_dress.mp4"
+        "C:/Users/henry/Projects/Val_Launcher/cmd/launch/resources/pink_hair.mp4"
       ],
       "ouput": "C:/Riot Games/VALORANT/live/ShooterGame/Content/Movies/Menu/11_00_Homescreen.mp4"
     }
