@@ -22,6 +22,19 @@ type Config struct {
 	} `json:"changes"`
 }
 
+/*
+# concept
+
+## perma open detect run | tie into configurer
+stays open permanently and when it detects that
+VALORANT.exe is launching it inputs the correct files
+
+## run val_launcher.exe and that runs val with edited files
+lol
+
+
+*/
+
 // func main() {
 // 	configPath := filepath.Join(exeDir(), "config.json")
 // 	config := parseConfig(configPath)
@@ -50,6 +63,8 @@ func main() {
 	configPath := filepath.Join(exeDir(), "config.json")
 	config := parseConfig(configPath)
 
+	resetValorantState(config)
+
 	time.Sleep(3 * time.Second) // Pause for 5 seconds
 
 	// run valorant
@@ -59,11 +74,25 @@ func main() {
 		log.Fatalf("Failed to run RiotClient.exe: %v", err)
 	}
 
-	cmd.Process.Kill()
+	for {
+		if isProcessRunning("RiotClientServices.exe") {
+			// time.Sleep(3000 * time.Millisecond)
+			fmt.Println("riot client services opened")
+			time.Sleep(3 * time.Second)
+			applyChanges(config)
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 
 	for {
+		if !isProcessRunning("RiotClientServices.exe") {
+			fmt.Println("riot client services closed")
+			break
+		}
 		if isProcessRunning("VALORANT.exe") {
-			applyChanges(config)
+			fmt.Println("valorant opened")
+			cmd.Process.Kill()
 			break
 		}
 		time.Sleep(1 * time.Second)
