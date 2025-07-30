@@ -1,5 +1,12 @@
 **/default_resources/**
+# Ignore all files in any cache folder
 **/cache/*
+
+# But do NOT ignore the cache folder itself
+!**/cache/
+
+# And do NOT ignore a .gitkeep file inside each cache folder (to keep it in git)
+!**/cache/.gitkeep
 resources/
 /bin/
 /dist/
