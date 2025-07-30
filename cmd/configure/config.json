@@ -4,10 +4,24 @@
     {
       "description": "homescreen",
       "inputs": [
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/artemis.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/bed.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/black_dress.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/blue_hoodie.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/car.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/emo.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/hello_kitty.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/lip_touch.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/montell_fish.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/pink_hair.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/pony_tail.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/pouty.mp4",
         "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/red_dress_1.mp4",
         "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/red_dress_2.mp4",
-        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/pink_hair.mp4",
-        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/black_dress.mp4"
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/red_dress_3.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/red_streaks.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/vape_1.mp4",
+        "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/vape_2.mp4"
       ],
       "ouput": "C:/Riot Games/VALORANT/live/ShooterGame/Content/Movies/Menu/11_00_Homescreen.mp4"
     }

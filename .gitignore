@@ -1,5 +1,6 @@
+**/default_resources/**
+**/cache/*
 resources/
-**/default_resources/*
 /bin/
 /dist/
 /my_bin/

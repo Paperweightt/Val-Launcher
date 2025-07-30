@@ -3,13 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	// "image/color"
 	"image"
 	"image/color"
 	"image/png"
 	"log" // TODO: remove
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"gioui.org/app"
@@ -17,7 +17,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"path/filepath"
+	"gioui.org/unit"
 	// "gioui.org/text"
 	// "gioui.org/unit"
 	// "gioui.org/widget"
@@ -34,9 +34,6 @@ type Config struct {
 }
 
 func main() {
-	config := parseConfig("./config.json")
-	fmt.Println(config)
-
 	go func() {
 		window := new(app.Window)
 		window.Option(app.Title("Val Editor"))
@@ -67,83 +64,28 @@ func parseConfig(filepath string) Config {
 }
 
 func draw(window *app.Window) error {
-	configPath := filepath.Join(exeDir(), "config.json")
-	config := parseConfig(configPath)
-
-	var images = layout.List{}
 	var ops op.Ops
+	var imagesList = layout.List{
+		Axis: layout.Vertical,
+	}
 
 	for {
 		switch e := window.Event().(type) {
 		case app.DestroyEvent:
 			return e.Err
 		case app.FrameEvent:
-			// This graphics context is used for managing the rendering state.
 			gtx := app.NewContext(&ops, e)
 
+			// dark gray background
+			paint.Fill(gtx.Ops, color.NRGBA{R: 30, G: 30, B: 30, A: 255})
+
 			layout.Flex{
-				Axis:    layout.Horizontal,
-				Spacing: layout.SpaceEnd,
+				Axis:    layout.Vertical,
+				Spacing: layout.SpaceStart,
 			}.Layout(gtx,
-				// layout.Rigid(
-				// 	func(gtx layout.Context) layout.Dimensions {
-				//
-				// 		margins := layout.Inset{
-				// 			Top:    unit.Dp(15),
-				// 			Bottom: unit.Dp(15),
-				// 			Right:  unit.Dp(15),
-				// 			Left:   unit.Dp(15),
-				// 		}
-				//
-				// 		return margins.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				// 			const radius = 20
-				// 			mp4path := "C:/Users/henry/Projects/Val_Launcher/my_bin/resources/red_dress_1.mp4"
-				// 			img := getPng(mp4path)
-				// 			size := img.Bounds().Size()
-				//
-				// 			imgOp := paint.NewImageOp(img)
-				// 			imgOp.Add(gtx.Ops)
-				//
-				// 			clip.RRect{
-				// 				Rect: image.Rectangle{Max: size},
-				// 				SE:   radius,
-				// 				SW:   radius,
-				// 				NW:   radius,
-				// 				NE:   radius,
-				// 			}.Push(gtx.Ops)
-				//
-				// 			// Paint it to the screen
-				// 			paint.PaintOp{}.Add(gtx.Ops)
-				//
-				// 			return layout.Dimensions{Size: size}
-				// 		})
-				// 	},
-				// ),
-				layout.Rigid(
-					func(gtx layout.Context) layout.Dimensions {
-						return images.Layout(gtx, len(config.Changes[0].Inputs), func(gtx layout.Context, i int) layout.Dimensions {
-							const radius = 20
-							img := getPng(config.Changes[0].Inputs[i])
-							size := img.Bounds().Size()
-
-							imgOp := paint.NewImageOp(img)
-							imgOp.Add(gtx.Ops)
-
-							clip.RRect{
-								Rect: image.Rectangle{Max: size},
-								SE:   radius,
-								SW:   radius,
-								NW:   radius,
-								NE:   radius,
-							}.Push(gtx.Ops)
-
-							// Paint it to the screen
-							paint.PaintOp{}.Add(gtx.Ops)
-
-							return layout.Dimensions{Size: size}
-						})
-					},
-				),
+				layout.Flexed(.5, func(gtx layout.Context) layout.Dimensions {
+					return imagesTable(gtx, imagesList, 3)
+				}),
 			)
 
 			e.Frame(gtx.Ops)
@@ -151,46 +93,81 @@ func draw(window *app.Window) error {
 	}
 }
 
-func ColorBox(gtx layout.Context, size image.Point, color color.NRGBA) layout.Dimensions {
-	defer clip.Rect{Max: size}.Push(gtx.Ops).Pop()
-	paint.ColorOp{Color: color}.Add(gtx.Ops)
-	paint.PaintOp{}.Add(gtx.Ops)
-	return layout.Dimensions{Size: size}
+func imagesTable(gtx layout.Context, list layout.List, colums int) layout.Dimensions {
+	configPath := filepath.Join(exeDir(), "config.json")
+	config := parseConfig(configPath)
+	// imagesLen := len(config.Changes[0].Inputs)
+	var row = layout.List{}
+	const radius = 20
+
+	return layout.UniformInset(unit.Dp(20)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return list.Layout(gtx, 6, func(gtx layout.Context, i int) layout.Dimensions {
+			return row.Layout(gtx, colums, func(gtx layout.Context, j int) layout.Dimensions {
+				// fmt.Println(i, j, i*(colums)+j)
+				img := pngFromMp4Dir(config.Changes[0].Inputs[i*(colums)+j])
+				size := img.Bounds().Size()
+
+				imgOp := paint.NewImageOp(img)
+				imgOp.Add(gtx.Ops)
+
+				defer clip.RRect{
+					Rect: image.Rectangle{Max: size},
+					SE:   radius,
+					SW:   radius,
+					NW:   radius,
+					NE:   radius,
+				}.Push(gtx.Ops).Pop()
+
+				paint.PaintOp{}.Add(gtx.Ops)
+
+				return layout.Dimensions{Size: size}
+			})
+		})
+	})
 }
 
-func getPng(filepath string) image.Image {
-	cmd := exec.Command("ffmpeg",
-		"-i", filepath,
-		"-vf", "select=eq(n\\,0), scale=300:-1",
-		"-vframes", "1",
-		"-f", "image2pipe",
-		"-vcodec", "png",
-		"-",
-	)
+func pngFromMp4Dir(mp4Dir string) image.Image {
+	base := filepath.Base(mp4Dir)
+	cacheDirBase := base[0:len(base)-3] + "png"
+	cacheDir := filepath.Join(exeDir(), "cache", cacheDirBase)
 
-	stdout, err := cmd.StdoutPipe()
+	file, err := os.Open(cacheDir)
+
 	if err != nil {
-		fmt.Println("Failed to get stdout:", err)
-		return nil
+		cachePngFromMp4Dir(mp4Dir)
+		return pngFromMp4Dir(mp4Dir)
 	}
 
-	if err := cmd.Start(); err != nil {
-		fmt.Println("Failed to start ffmpeg:", err)
-		return nil
-	}
+	img, err := png.Decode(file)
 
-	img, err := png.Decode(stdout)
 	if err != nil {
 		fmt.Println("Failed to decode image:", err)
 		return nil
 	}
 
-	if err := cmd.Wait(); err != nil {
-		fmt.Println("ffmpeg error:", err)
-		return nil
+	return img
+}
+
+func cachePngFromMp4Dir(mp4Dir string) error {
+	base := filepath.Base(mp4Dir)
+	cacheDirBase := base[0:len(base)-3] + "png"
+	cacheDir := filepath.Join(exeDir(), "cache", cacheDirBase)
+
+	err := exec.Command("ffmpeg",
+		"-i",
+		mp4Dir,
+		"-vf",
+		"select=eq(n\\,0), scale=300:-1",
+		"-vframes",
+		"1",
+		cacheDir,
+	).Run()
+
+	if err != nil {
+		return err
 	}
 
-	return img
+	return nil
 }
 
 func exeDir() string {
