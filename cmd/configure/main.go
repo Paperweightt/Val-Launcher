@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"unsafe"
 
 	"gioui.org/app"
 	"gioui.org/layout"
@@ -35,10 +37,21 @@ type Config struct {
 
 func main() {
 	go func() {
+		windowName := "Val Editor"
 		window := new(app.Window)
 		window.Option(app.Title("Val Editor"))
 
-		err := draw(window)
+		hwnd, err := findWindow("GioWindow", windowName)
+
+		if err != nil {
+			fmt.Println("failed to find window", err)
+		}
+
+		dll := syscall.NewLazyDLL("../drag_drop/dragdrop.dll")
+		setup := dll.NewProc("SetupDragAndDrop")
+		setup.Call(uintptr(hwnd))
+
+		err = draw(window)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -69,6 +82,14 @@ func draw(window *app.Window) error {
 		Axis: layout.Vertical,
 	}
 
+	configPath := filepath.Join(exeDir(), "config.json")
+	config := parseConfig(configPath)
+
+	var row = layout.List{}
+	const image_round = 20
+	const outside_inset = unit.Dp(20)
+	const inside_inset = unit.Dp(8)
+
 	for {
 		switch e := window.Event().(type) {
 		case app.DestroyEvent:
@@ -76,18 +97,54 @@ func draw(window *app.Window) error {
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
 
+			// Step 1: Get the available width in pixels
+			availableWidthPx := gtx.Constraints.Max.X - (int(outside_inset) * 2)
+			imageWidthDp := unit.Dp(200) + inside_inset
+			imageWidthInt := int(imageWidthDp)
+
+			pictures := len(config.Changes[0].Inputs)
+			columns := availableWidthPx / imageWidthInt
+			rows := (pictures + columns - 1) / columns // rows = pictures / colums
+
+			fmt.Println("col: ", columns, " row: ", rows)
+
 			// dark gray background
 			paint.Fill(gtx.Ops, color.NRGBA{R: 30, G: 30, B: 30, A: 255})
 
-			layout.Flex{
-				Axis:    layout.Vertical,
-				Spacing: layout.SpaceStart,
-			}.Layout(gtx,
-				layout.Flexed(.5, func(gtx layout.Context) layout.Dimensions {
-					return imagesTable(gtx, imagesList, 3)
+			layout.Flex{}.Layout(gtx,
+				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(outside_inset).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return imagesList.Layout(gtx, rows, func(gtx layout.Context, i int) layout.Dimensions {
+							if i+1 == rows {
+								columns = pictures % columns
+							}
+
+							return row.Layout(gtx, columns, func(gtx layout.Context, j int) layout.Dimensions {
+								return layout.UniformInset(inside_inset).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+									// fmt.Println(i, j, i*(colums)+j)
+									img := pngFromMp4Dir(config.Changes[0].Inputs[i*(columns)+j])
+									size := img.Bounds().Size()
+
+									imgOp := paint.NewImageOp(img)
+									imgOp.Add(gtx.Ops)
+
+									defer clip.RRect{
+										Rect: image.Rectangle{Max: size},
+										SE:   image_round,
+										SW:   image_round,
+										NW:   image_round,
+										NE:   image_round,
+									}.Push(gtx.Ops).Pop()
+
+									paint.PaintOp{}.Add(gtx.Ops)
+
+									return layout.Dimensions{Size: size}
+								})
+							})
+						})
+					})
 				}),
 			)
-
 			e.Frame(gtx.Ops)
 		}
 	}
@@ -101,26 +158,28 @@ func imagesTable(gtx layout.Context, list layout.List, colums int) layout.Dimens
 	const radius = 20
 
 	return layout.UniformInset(unit.Dp(20)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return list.Layout(gtx, 6, func(gtx layout.Context, i int) layout.Dimensions {
+		return list.Layout(gtx, 18, func(gtx layout.Context, i int) layout.Dimensions {
 			return row.Layout(gtx, colums, func(gtx layout.Context, j int) layout.Dimensions {
-				// fmt.Println(i, j, i*(colums)+j)
-				img := pngFromMp4Dir(config.Changes[0].Inputs[i*(colums)+j])
-				size := img.Bounds().Size()
+				return layout.UniformInset(unit.Dp(8)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					// fmt.Println(i, j, i*(colums)+j)
+					img := pngFromMp4Dir(config.Changes[0].Inputs[i*(colums)+j])
+					size := img.Bounds().Size()
 
-				imgOp := paint.NewImageOp(img)
-				imgOp.Add(gtx.Ops)
+					imgOp := paint.NewImageOp(img)
+					imgOp.Add(gtx.Ops)
 
-				defer clip.RRect{
-					Rect: image.Rectangle{Max: size},
-					SE:   radius,
-					SW:   radius,
-					NW:   radius,
-					NE:   radius,
-				}.Push(gtx.Ops).Pop()
+					defer clip.RRect{
+						Rect: image.Rectangle{Max: size},
+						SE:   radius,
+						SW:   radius,
+						NW:   radius,
+						NE:   radius,
+					}.Push(gtx.Ops).Pop()
 
-				paint.PaintOp{}.Add(gtx.Ops)
+					paint.PaintOp{}.Add(gtx.Ops)
 
-				return layout.Dimensions{Size: size}
+					return layout.Dimensions{Size: size}
+				})
 			})
 		})
 	})
@@ -157,7 +216,7 @@ func cachePngFromMp4Dir(mp4Dir string) error {
 		"-i",
 		mp4Dir,
 		"-vf",
-		"select=eq(n\\,0), scale=300:-1",
+		"select=eq(n\\,0), scale=200:-1",
 		"-vframes",
 		"1",
 		cacheDir,
@@ -178,13 +237,29 @@ func exeDir() string {
 
 	exeDir := filepath.Dir(exePath)
 
-	// Detect if running from a temp folder (go run)
 	if strings.Contains(exeDir, "go-build") {
-		fmt.Println("Using development fallback files")
-		// fallback to current working dir
 		wd, _ := os.Getwd()
 		return wd
 	}
 
 	return exeDir
+}
+
+var (
+	user32          = syscall.NewLazyDLL("user32.dll")
+	procFindWindowW = user32.NewProc("FindWindowW")
+)
+
+func findWindow(className, windowName string) (hwnd syscall.Handle, err error) {
+	cn, _ := syscall.UTF16PtrFromString(className)
+	wn, _ := syscall.UTF16PtrFromString(windowName)
+
+	ret, _, err := procFindWindowW.Call(
+		uintptr(unsafe.Pointer(cn)),
+		uintptr(unsafe.Pointer(wn)),
+	)
+	if ret == 0 {
+		return 0, err
+	}
+	return syscall.Handle(ret), nil
 }
