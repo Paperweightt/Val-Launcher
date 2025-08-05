@@ -19,6 +19,7 @@ LRESULT CALLBACK HookedWndProc(HWND hwnd, UINT msg, WPARAM wParam,
   return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
+__declspec(dllexport) int DummyFunc() { return 1; }
 __declspec(dllexport) void SetupDragAndDrop(HWND hwnd) {
   DragAcceptFiles(hwnd, TRUE);
 }

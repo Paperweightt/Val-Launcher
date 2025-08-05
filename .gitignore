@@ -13,3 +13,5 @@
 /bin/
 /dist/
 /my_bin/
+
+*.dll
